@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: webapp
+type: Opaque
+data:
+  MYSQL_ROOT_USERNAME: cm9vdA0K
+  MYSQL_ROOT_PASSWORD: MTIzNDU2DQo=
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: webapp
+data:
+  SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-service:3300/test"
+  SPRING_DATASOURCE_USERNAME: "root"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+  namespace: webapp
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  namespace: webapp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: imanebougalzim/backend:1.0.1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: SPRING_DATASOURCE_URL
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: backend-config
+                  key: SPRING_DATASOURCE_USERNAME

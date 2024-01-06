@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: webapp
+type: Opaque
+data:
+  MYSQL_ROOT_USERNAME: cm9vdA0K
+  MYSQL_ROOT_PASSWORD: MTIzNDU2DQo=
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: webapp
+spec:
+  selector:
+    app: mysql
+  ports:
+    - protocol: TCP
+      port: 3300
+      targetPort: 3300
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-statefulset
+  namespace: webapp
+spec:
+  serviceName: mysql-service
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: test
+          ports:
+            - containerPort: 3300
+              name: db-port
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
